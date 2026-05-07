@@ -1,0 +1,6 @@
+{
+  "private": true,
+  "scripts": {
+    "vercel-build": "cd danapp/dashboard && npm install && npm run build"
+  }
+}
