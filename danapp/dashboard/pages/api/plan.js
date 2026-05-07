@@ -1,8 +1,15 @@
-import fetch from "node-fetch";
+import axios from "axios";
+import http from "http";
+import https from "https";
+
+// Force IPv4 by creating agents with family: 4
+const httpAgent = new http.Agent({ family: 4 });
+const httpsAgent = new https.Agent({ family: 4 });
 
 export default async function handler(req, res) {
   // protect with secret header
   if (req.headers["x-secret"] !== process.env.DASHBOARD_SECRET) {
+    console.error("Auth failed: secret mismatch");
     return res.status(401).json({ error: "unauthorized" });
   }
 
@@ -15,10 +22,13 @@ export default async function handler(req, res) {
   if (!prompt) return res.status(400).json({ error: "prompt required" });
 
   const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: "OpenRouter API key missing" });
+  if (!apiKey) {
+    console.error("OPENROUTER_API_KEY not set");
+    return res.status(500).json({ error: "OpenRouter API key missing" });
+  }
 
-  // default model – you can change to any OpenRouter model identifier
-  const selectedModel = model || "openrouter/anthropic/claude-3-opus";
+  // Use free model to save costs during testing
+  const selectedModel = model || "meta-llama/llama-3.1-8b-instruct:free";
 
   const payload = {
     model: selectedModel,
@@ -28,19 +38,41 @@ export default async function handler(req, res) {
   };
 
   try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-    const data = await response.json();
-    const answer = data?.choices?.[0]?.message?.content || "";
+    console.log("Calling OpenRouter with model:", selectedModel);
+    
+    const response = await axios.post(
+      "https://openrouter.ai/api/v1/chat/completions",
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        timeout: 30000,
+        httpAgent,
+        httpsAgent,
+      }
+    );
+    
+    console.log("OpenRouter response status:", response.status);
+    
+    const answer = response.data?.choices?.[0]?.message?.content || "";
     res.status(200).json({ answer });
+
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: e.message });
+    console.error("OpenRouter error:", e.response?.data || e.message);
+    
+    if (e.code === 'ETIMEDOUT' || e.code === 'ECONNABORTED') {
+      return res.status(504).json({ error: "Request timeout - check your network connection" });
+    }
+    
+    if (e.response) {
+      return res.status(e.response.status).json({ 
+        error: e.response.data?.error?.message || "OpenRouter API error",
+        details: e.response.data 
+      });
+    }
+    
+    res.status(500).json({ error: `Network error: ${e.message}` });
   }
 }
