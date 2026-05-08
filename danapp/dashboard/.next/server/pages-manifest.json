@@ -1,7 +1,1 @@
-{
-  "/_app": "pages/_app.js",
-  "/_error": "pages/_error.js",
-  "/_document": "pages/_document.js",
-  "/history": "pages/history.js",
-  "/": "pages/index.js"
-}
+{"/_error":"pages/_error.js","/_app":"pages/_app.js","/api/ai-history":"pages/api/ai-history.js","/api/telegram":"pages/api/telegram.js","/history":"pages/history.html","/":"pages/index.html","/api/notes":"pages/api/notes.js","/api/plan":"pages/api/plan.js","/api/weekly-notes":"pages/api/weekly-notes.js","/_document":"pages/_document.js","/404":"pages/404.html"}

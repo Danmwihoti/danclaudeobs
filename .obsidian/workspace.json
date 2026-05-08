@@ -205,6 +205,8 @@
   },
   "active": "7a7edf8bad62a06b",
   "lastOpenFiles": [
+    "danapp/dashboard/node_modules/@next/swc-darwin-arm64",
+    "danapp/dashboard/node_modules/@next/swc-darwin-x64",
     "danapp/dashboard/node_modules/@next/swc-win32-x64-msvc",
     "danapp/dashboard/node_modules/@next/swc-win32-ia32-msvc",
     "danapp/dashboard/node_modules/@next/swc-win32-arm64-msvc",
@@ -214,8 +216,6 @@
     "danapp/dashboard/node_modules/telegraf/utils.d.ts",
     "danapp/dashboard/node_modules/telegraf/types.d.ts",
     "danapp/dashboard/node_modules/telegraf/session.d.ts",
-    "danapp/dashboard/node_modules/telegraf/scenes.d.ts",
-    "danapp/dashboard/node_modules/telegraf/markup.d.ts",
     "danapp/dashboard/node_modules/telegraf/README.md",
     "danapp/dashboard/node_modules/sandwich-stream/README.md",
     "danapp/dashboard/node_modules/p-timeout/readme.md",
