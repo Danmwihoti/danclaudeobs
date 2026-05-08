@@ -290,6 +290,12 @@ export default function TrackerPage() {
               <button onClick={loadTracker} style={styles.secondaryBtn}>
                 🔄 Reload
               </button>
+              <button 
+                onClick={() => { setActiveTab("ai"); setPrompt("Analyze my daily tracker entries and provide 3-5 actionable tips to improve my productivity, accomplish more goals, and address any blockers mentioned."); }} 
+                style={styles.analyzeBtn}
+              >
+                📊 Analyze My Day
+              </button>
             </div>
             {msg && <span style={msg.includes("✅") ? styles.successMsg : styles.errorMsg}>{msg}</span>}
           </div>
@@ -366,6 +372,12 @@ export default function TrackerPage() {
                   </button>
                   <button onClick={loadWeekly} style={styles.secondaryBtn}>
                     🔄 Reload
+                  </button>
+                  <button 
+                    onClick={() => { setActiveTab("ai"); setPrompt("Analyze my weekly tracker goals, completed tasks, blockers, and reflections. Provide specific guidance to help me accomplish my goals, overcome challenges, and improve my accountability for next week."); }} 
+                    style={styles.analyzeBtn}
+                  >
+                    📊 Analyze My Week
                   </button>
                 </div>
                 {weeklyMsg && <span style={weeklyMsg.includes("✅") ? styles.successMsg : styles.errorMsg}>{weeklyMsg}</span>}
@@ -473,6 +485,16 @@ const styles = {
     cursor: "not-allowed",
     borderRadius: "6px",
     fontSize: "0.95rem",
+  },
+  analyzeBtn: {
+    padding: "0.5rem 1rem",
+    backgroundColor: "#10b981",
+    color: "#fff",
+    border: "none",
+    cursor: "pointer",
+    borderRadius: "6px",
+    fontSize: "0.9rem",
+    fontWeight: "bold" as const,
   },
   successMsg: {
     marginLeft: "1rem",

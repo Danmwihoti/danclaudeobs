@@ -29,20 +29,46 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "OpenRouter API key missing" });
   }
 
-  // Read tracker context
+  // Read tracker context (Daily + Weekly)
   let trackerContext = "";
   try {
     const fs = require("fs").promises;
     const path = require("path");
     const vaultPath = process.env.VAULT_PATH || "/home/danhomelab/Documents/danGene";
-    const trackerPath = path.join(vaultPath, "Templates", "Daily Tracker.md");
-    trackerContext = await fs.readFile(trackerPath, "utf-8");
+    
+    // Read Daily Tracker
+    const dailyPath = path.join(vaultPath, "Templates", "Daily Tracker.md");
+    const dailyContent = await fs.readFile(dailyPath, "utf-8");
+    
+    // Read Weekly Tracker
+    const weeklyPath = path.join(vaultPath, "Templates", "Weekly Tracker.md");
+    const weeklyContent = await fs.readFile(weeklyPath, "utf-8");
+    
+    trackerContext = `DAILY TRACKER:\n${dailyContent}\n\nWEEKLY TRACKER:\n${weeklyContent}`;
   } catch (e) {
-    console.log("Could not load tracker:", e.message);
+    console.log("Could not load trackers:", e.message);
   }
 
+  // Check if this is an analysis request
+  const isAnalysisRequest = prompt.toLowerCase().includes("analy") || 
+                           prompt.toLowerCase().includes("tip") || 
+                           prompt.toLowerCase().includes("improve") ||
+                           prompt.toLowerCase().includes("guidance") ||
+                           prompt.toLowerCase().includes("help me");
+
+  const systemMessage = isAnalysisRequest ? 
+    `You are a productivity coach analyzing the user's Daily and Weekly Trackers. 
+     Provide SPECIFIC, ACTIONABLE tips and guidance based on their actual tracker content.
+     Focus on:
+     - Goal progress and completion rates
+     - Patterns in blockers or reflections
+     - Specific improvements for next week
+     - Accountability insights
+     Format your response with clear sections and bullet points.` : 
+    "You are a helpful AI assistant.";
+
   const fullPrompt = trackerContext 
-    ? `Daily Tracker Content:\n${trackerContext}\n\nUser Question: ${prompt}`
+    ? `${systemMessage}\n\nTRACKER DATA:\n${trackerContext}\n\nUser Question: ${prompt}`
     : prompt;
 
   const modelsToTry = model ? [model] : FREE_MODELS;
@@ -51,7 +77,12 @@ export default async function handler(req, res) {
   for (const selectedModel of modelsToTry) {
     const payload = {
       model: selectedModel,
-      messages: [{ role: "user", content: fullPrompt }],
+      messages: isAnalysisRequest ? [
+        { role: "system", content: systemMessage },
+        { role: "user", content: `TRACKER DATA:\n${trackerContext}\n\nUser Question: ${prompt}` }
+      ] : [
+        { role: "user", content: fullPrompt }
+      ],
       temperature: 0.2,
       max_tokens: 2048,
     };

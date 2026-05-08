@@ -3,6 +3,5 @@
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
   "/": "pages/index.js",
-  "/history": "pages/history.js",
-  "/api/weekly-notes": "pages/api/weekly-notes.js"
+  "/history": "pages/history.js"
 }
