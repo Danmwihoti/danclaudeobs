@@ -10,30 +10,45 @@ export default function TrackerPage() {
   const [msg, setMsg] = useState("");
   const [saving, setSaving] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
-  const [activeTab, setActiveTab] = useState<"tracker" | "ai">("tracker");
+  const [activeTab, setActiveTab] = useState<"tracker" | "ai" | "weekly">("tracker");
   
   // AI planning state
   const [prompt, setPrompt] = useState("");
   const [aiResponse, setAiResponse] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  
+  // Weekly tracker state
+  const [weeklyContent, setWeeklyContent] = useState("");
+  const [weeklyLoading, setWeeklyLoading] = useState(false);
+  const [weeklySaving, setWeeklySaving] = useState(false);
+  const [weeklyPreviewMode, setWeeklyPreviewMode] = useState(false);
+  const [weeklyMsg, setWeeklyMsg] = useState("");
 
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await axios.get("/api/notes", {
-          headers: { "x-secret": secret },
-        });
-        setContent(res.data.content);
-      } catch (e) {
-        console.error(e);
-        setMsg("❗ Could not load tracker");
-      } finally {
-        setLoading(false);
-      }
-    })();
+    loadTracker();
   }, []);
 
+  const loadTracker = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.get("/api/notes", {
+        headers: { "x-secret": secret },
+      });
+      setContent(res.data.content);
+    } catch (e) {
+      console.error(e);
+      setMsg("❗ Could not load tracker");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const save = async () => {
+    if (!content.trim()) {
+      setMsg("❗ Nothing to save");
+      return;
+    }
+    
     setSaving(true);
     setMsg("");
     try {
@@ -42,14 +57,92 @@ export default function TrackerPage() {
         { content },
         { headers: { "x-secret": secret } }
       );
-      setMsg("✅ Saved");
-      setTimeout(() => setMsg(""), 3000);
+      setMsg("✅ Saved successfully");
+      
+      // Clear form after short delay and load fresh template
+      setTimeout(() => {
+        setMsg("");
+        setContent(getEmptyTemplate());
+        setPreviewMode(false);
+      }, 1500);
     } catch (e) {
       console.error(e);
       setMsg("❗ Save failed");
     } finally {
       setSaving(false);
     }
+  };
+
+  const appendEntry = async () => {
+    if (!content.trim()) {
+      setMsg("❗ Nothing to save");
+      return;
+    }
+    
+    setSaving(true);
+    setMsg("");
+    try {
+      // Get current content
+      const res = await axios.get("/api/notes", {
+        headers: { "x-secret": secret },
+      });
+      
+      const currentContent = res.data.content;
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const dateStr = `${yyyy}-${mm}-${dd}`;
+      const timestamp = `${dateStr} ${today.getHours()}:${String(today.getMinutes()).padStart(2, '0')}`;
+      const newEntry = `\n\n---\n### Entry: ${timestamp}\n\n${content}`;
+      
+      // Append new entry to existing content
+      await axios.post(
+        "/api/notes",
+        { content: currentContent + newEntry },
+        { headers: { "x-secret": secret } }
+      );
+      
+      setMsg("✅ Entry added successfully");
+      
+      // Clear form for next entry
+      setTimeout(() => {
+        setMsg("");
+        setContent("");
+        setPreviewMode(false);
+      }, 1500);
+    } catch (e) {
+      console.error(e);
+      setMsg("❗ Failed to add entry");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const getEmptyTemplate = () => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const dateStr = `${yyyy}-${mm}-${dd}`;
+    
+    return `# Daily Tracker - ${dateStr}
+
+## 🌅 Morning Intention
+- 
+
+## ✅ What I Accomplished
+- 
+
+## 📚 What I Learned
+- 
+
+## 💡 Ideas & Notes
+- 
+
+## 🎯 Next Steps
+- 
+`;
   };
 
   const askAI = async () => {
@@ -68,6 +161,81 @@ export default function TrackerPage() {
       setAiResponse("❗ Error: Could not get AI response");
     } finally {
       setAiLoading(false);
+    }
+  };
+
+  // Weekly Tracker Functions
+  const loadWeekly = async () => {
+    setWeeklyLoading(true);
+    try {
+      const res = await axios.get("/api/weekly-notes", {
+        headers: { "x-secret": secret },
+      });
+      setWeeklyContent(res.data.content || getWeeklyTemplate());
+    } catch (e) {
+      console.error(e);
+      setWeeklyContent(getWeeklyTemplate());
+    } finally {
+      setWeeklyLoading(false);
+    }
+  };
+
+  const getWeeklyTemplate = () => {
+    const today = new Date();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - (today.getDay() === 0 ? 6 : today.getDay() - 1));
+    const yyyy = monday.getFullYear();
+    const mm = String(monday.getMonth() + 1).padStart(2, '0');
+    const dd = String(monday.getDate()).padStart(2, '0');
+    const weekStart = `${yyyy}-${mm}-${dd}`;
+    
+    return `# Weekly Tracker - ${weekStart}
+
+## 🎯 Goals This Week
+- [ ] Goal 1: 
+- [ ] Goal 2: 
+- [ ] Goal 3: 
+
+## ✅ Completed Tasks
+- 
+
+## 🚧 Blockers
+- 
+
+## 📝 Reflections
+- 
+
+## 📊 Accountability Check
+**Did I meet my goals?**
+- 
+
+**What slowed me down?**
+- 
+
+**What will I improve next week?**
+- `;
+  };
+
+  const saveWeekly = async () => {
+    if (!weeklyContent.trim()) {
+      setWeeklyMsg("❗ Nothing to save");
+      return;
+    }
+    setWeeklySaving(true);
+    setWeeklyMsg("");
+    try {
+      await axios.post(
+        "/api/weekly-notes",
+        { content: weeklyContent },
+        { headers: { "x-secret": secret } }
+      );
+      setWeeklyMsg("✅ Weekly plan saved!");
+      setTimeout(() => setWeeklyMsg(""), 1500);
+    } catch (e) {
+      console.error(e);
+      setWeeklyMsg("❗ Failed to save weekly plan");
+    } finally {
+      setWeeklySaving(false);
     }
   };
 
@@ -94,7 +262,16 @@ export default function TrackerPage() {
           >
             🤖 AI Planner
           </button>
+          <button 
+            onClick={() => { setActiveTab("weekly"); loadWeekly(); }}
+            style={activeTab === "weekly" ? styles.activeTab : styles.tab}
+          >
+            📅 Weekly Tracker
+          </button>
         </div>
+        <button onClick={() => window.location.href = "/history"} style={styles.historyBtn}>
+          📜 History
+        </button>
       </header>
 
       {activeTab === "tracker" && (
@@ -105,7 +282,13 @@ export default function TrackerPage() {
                 {previewMode ? "✏️ Edit" : "👁️ Preview"}
               </button>
               <button onClick={save} disabled={saving} style={saving ? styles.saveBtnDisabled : styles.saveBtn}>
-                {saving ? "Saving…" : "💾 Save"}
+                {saving ? "Saving…" : "💾 Save & New"}
+              </button>
+              <button onClick={appendEntry} disabled={saving} style={saving ? styles.saveBtnDisabled : styles.secondaryBtn}>
+                {saving ? "Adding…" : "➕ Add Entry"}
+              </button>
+              <button onClick={loadTracker} style={styles.secondaryBtn}>
+                🔄 Reload
               </button>
             </div>
             {msg && <span style={msg.includes("✅") ? styles.successMsg : styles.errorMsg}>{msg}</span>}
@@ -155,6 +338,53 @@ export default function TrackerPage() {
               </div>
             )}
           </div>
+        </main>
+      )}
+
+      {activeTab === "weekly" && (
+        <main style={styles.main}>
+          {weeklyLoading ? (
+            <div style={styles.loadingContainer}>
+              <p style={styles.loadingText}>Loading weekly tracker…</p>
+            </div>
+          ) : (
+            <div style={styles.trackerContainer}>
+              <div style={styles.editorHeader}>
+                <div style={styles.buttonGroup}>
+                  <button 
+                    onClick={() => setWeeklyPreviewMode(!weeklyPreviewMode)} 
+                    style={styles.secondaryBtn}
+                  >
+                    {weeklyPreviewMode ? "✏️ Edit" : "👁️ Preview"}
+                  </button>
+                  <button 
+                    onClick={saveWeekly} 
+                    disabled={weeklySaving} 
+                    style={weeklySaving ? styles.saveBtnDisabled : styles.saveBtn}
+                  >
+                    {weeklySaving ? "Saving…" : "💾 Save Weekly Plan"}
+                  </button>
+                  <button onClick={loadWeekly} style={styles.secondaryBtn}>
+                    🔄 Reload
+                  </button>
+                </div>
+                {weeklyMsg && <span style={weeklyMsg.includes("✅") ? styles.successMsg : styles.errorMsg}>{weeklyMsg}</span>}
+              </div>
+
+              {weeklyPreviewMode ? (
+                <div style={styles.previewContainer}>
+                  <ReactMarkdown>{weeklyContent}</ReactMarkdown>
+                </div>
+              ) : (
+                <textarea
+                  style={styles.textarea}
+                  value={weeklyContent}
+                  onChange={(e) => setWeeklyContent(e.target.value)}
+                  placeholder="Plan your week with goals, track progress, and reflect..."
+                />
+              )}
+            </div>
+          )}
         </main>
       )}
     </div>
@@ -209,10 +439,13 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: "1rem",
+    flexWrap: "wrap" as const,
+    gap: "0.5rem",
   },
   buttonGroup: {
     display: "flex",
     gap: "0.5rem",
+    flexWrap: "wrap" as const,
   },
   secondaryBtn: {
     padding: "0.5rem 1rem",
@@ -270,6 +503,11 @@ const styles = {
     minHeight: "500px",
     lineHeight: "1.6",
   },
+  trackerContainer: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: "1rem",
+  },
   aiContainer: {
     display: "flex",
     flexDirection: "column" as const,
@@ -319,5 +557,14 @@ const styles = {
   loadingText: {
     fontSize: "1.2rem",
     color: "#666",
+  },
+  historyBtn: {
+    padding: "0.5rem 1rem",
+    border: "1px solid #ddd",
+    backgroundColor: "#fff",
+    cursor: "pointer",
+    borderRadius: "6px",
+    fontSize: "0.9rem",
+    marginLeft: "auto",
   },
 };

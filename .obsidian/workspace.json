@@ -31,10 +31,14 @@
             "id": "7a7edf8bad62a06b",
             "type": "leaf",
             "state": {
-              "type": "graph",
-              "state": {},
-              "icon": "lucide-git-fork",
-              "title": "Graph view"
+              "type": "markdown",
+              "state": {
+                "file": "Templates/Daily Tracker.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Daily Tracker"
             }
           }
         ]
@@ -110,6 +114,7 @@
             "state": {
               "type": "backlink",
               "state": {
+                "file": "Templates/Daily Tracker.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -119,7 +124,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks"
+              "title": "Backlinks for Daily Tracker"
             }
           },
           {
@@ -128,11 +133,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
+                "file": "Templates/Daily Tracker.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links"
+              "title": "Outgoing links from Daily Tracker"
             }
           },
           {
@@ -170,12 +176,13 @@
             "state": {
               "type": "outline",
               "state": {
+                "file": "Templates/Daily Tracker.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline"
+              "title": "Outline of Daily Tracker"
             }
           }
         ]
@@ -198,19 +205,41 @@
   },
   "active": "7a7edf8bad62a06b",
   "lastOpenFiles": [
-    "README.md",
+    "danapp/dashboard/node_modules/pg-cloudflare/src/types.d.ts",
+    "danapp/dashboard/node_modules/pg-cloudflare/src/index.ts",
+    "danapp/dashboard/node_modules/pg-cloudflare/src/empty.ts",
+    "danapp/dashboard/node_modules/pg-cloudflare/src",
+    "danapp/dashboard/node_modules/pg-cloudflare/esm/index.mjs",
+    "danapp/dashboard/node_modules/pg-cloudflare/esm",
+    "danapp/dashboard/node_modules/pg-cloudflare/README.md",
+    "danapp/dashboard/node_modules/pg-cloudflare/package.json",
+    "danapp/dashboard/node_modules/pg/esm/index.mjs",
+    "danapp/dashboard/node_modules/pg/esm",
+    "danapp/dashboard/node_modules/pg/README.md",
+    "danapp/dashboard/node_modules/pg/package.json",
+    "danapp/dashboard/node_modules/pg-cloudflare/dist/index.js.map",
+    "danapp/dashboard/node_modules/pg-connection-string/README.md",
+    "danapp/dashboard/node_modules/pg-pool/README.md",
+    "danapp/dashboard/node_modules/xtend/README.md",
+    "danapp/dashboard/node_modules/split2/README.md",
+    "danapp/dashboard/node_modules/postgres-interval/readme.md",
+    "danapp/dashboard/node_modules/postgres-date/readme.md",
+    "danapp/dashboard/node_modules/postgres-bytea/readme.md",
+    "danapp/dashboard/node_modules/postgres-array/readme.md",
+    "danapp/dashboard/node_modules/pg-int8/README.md",
+    "danapp/dashboard/node_modules/pgpass/README.md",
+    "danapp/dashboard/node_modules/pg-types/README.md",
+    "danapp/dashboard/node_modules/pg-protocol/README.md",
+    "Templates/Weekly Tracker.md",
     "danapp/README.md",
-    "danapp/dashboard/pages/api/plan.js",
-    "danapp/dashboard/pages/api/plan.js.tmp.146786.1778099606780",
-    "Welcome.md",
-    "danapp/dashboard/pages/index.tsx",
-    "danapp/dashboard/pages/index.tsx.tmp.146786.1778094707257",
-    "danapp/dashboard/pages/api/notes.js",
-    "danapp/dashboard/pages/api/notes.js.tmp.146786.1778093989261",
-    "danapp/dashboard/pages/api",
-    "danapp/dashboard/pages",
-    "danapp/dashboard/package.json",
-    "danapp/dashboard/package.json.tmp.146786.1778091236784",
-    "Templates/Daily Tracker.md"
+    "danapp/dashboard/node_modules/next/README.md",
+    "danapp/dashboard/node_modules/next/dist/compiled/regenerator-runtime/README.md",
+    "danapp/dashboard/node_modules/next/dist/compiled/react-refresh/README.md",
+    "danapp/dashboard/node_modules/next/dist/compiled/react-is/README.md",
+    "danapp/dashboard/node_modules/next/dist/compiled/@babel/runtime/README.md",
+    "danapp/dashboard/node_modules/next/license.md",
+    "danapp/dashboard/node_modules/caniuse-lite/README.md",
+    "danapp/dashboard/node_modules/typescript/SECURITY.md",
+    "danapp/dashboard/node_modules/typescript/README.md"
   ]
 }
