@@ -1,40 +1,31 @@
 {
   "polyfillFiles": [
-    "static/chunks/polyfills-c67a75d1b6f99dc8.js"
+    "static/chunks/polyfills.js"
   ],
-  "devFiles": [],
+  "devFiles": [
+    "static/chunks/react-refresh.js"
+  ],
   "ampDevFiles": [],
   "lowPriorityFiles": [
-    "static/0n2_yIVLrJscaTZb84Rsi/_buildManifest.js",
-    "static/0n2_yIVLrJscaTZb84Rsi/_ssgManifest.js"
+    "static/development/_buildManifest.js",
+    "static/development/_ssgManifest.js"
   ],
   "rootMainFiles": [],
   "pages": {
     "/": [
-      "static/chunks/webpack-49e6bd860ea8586b.js",
-      "static/chunks/framework-0c7baedefba6b077.js",
-      "static/chunks/main-c379b48138cf9870.js",
-      "static/chunks/710-337b8b464b630a46.js",
-      "static/chunks/pages/index-3052a28a9f6229d7.js"
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/index.js"
     ],
     "/_app": [
-      "static/chunks/webpack-49e6bd860ea8586b.js",
-      "static/chunks/framework-0c7baedefba6b077.js",
-      "static/chunks/main-c379b48138cf9870.js",
-      "static/chunks/pages/_app-c54702eb327175a3.js"
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/_app.js"
     ],
     "/_error": [
-      "static/chunks/webpack-49e6bd860ea8586b.js",
-      "static/chunks/framework-0c7baedefba6b077.js",
-      "static/chunks/main-c379b48138cf9870.js",
-      "static/chunks/pages/_error-56a1a2eec59e6cbd.js"
-    ],
-    "/history": [
-      "static/chunks/webpack-49e6bd860ea8586b.js",
-      "static/chunks/framework-0c7baedefba6b077.js",
-      "static/chunks/main-c379b48138cf9870.js",
-      "static/chunks/710-337b8b464b630a46.js",
-      "static/chunks/pages/history-0023e36ca15b2adf.js"
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/_error.js"
     ]
   },
   "ampFirstPages": []

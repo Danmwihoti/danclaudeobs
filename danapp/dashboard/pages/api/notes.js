@@ -1,7 +1,10 @@
 import { promises as fs } from "fs";
 import path from "path";
 
-const VAULT = process.env.VAULT_PATH || "/home/danhomelab/Documents/danGene";
+// Resolve the vault directory. In Vercel the cwd is the lambda folder, so fall back to the repo root
+const VAULT = process.env.VAULT_PATH
+  ? path.resolve(process.env.VAULT_PATH)
+  : path.resolve(__dirname, '../../../');
 const TRACKER_FILE = path.join(VAULT, "Templates", "Daily Tracker.md");
 
 export default async function handler(req, res) {
