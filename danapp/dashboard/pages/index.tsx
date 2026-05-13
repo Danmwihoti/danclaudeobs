@@ -126,22 +126,42 @@ export default function TrackerPage() {
     const dd = String(today.getDate()).padStart(2, '0');
     const dateStr = `${yyyy}-${mm}-${dd}`;
     
-    return `# Daily Tracker - ${dateStr}
+    return `# ${dateStr} - Daily Tracker
 
-## 🌅 Morning Intention
-- 
+## 🎯 Goals for the Day
+- [ ] **Career**:
+- [ ] **Wealth**:
+- [ ] **Fun**:
 
-## ✅ What I Accomplished
-- 
+## 📚 Reading
+- **Personal growth**:
+- **Bitcoin**:
+- **Rust**:
+- **Quant**:
 
-## 📚 What I Learned
-- 
+## 💻 Coding / Open-Source
+- Repository:
+- Feature / Bug:
+- PR # (if any):
 
-## 💡 Ideas & Notes
-- 
+## 💼 Job Hunt / Gigs
+- Applications sent:
+- Follow-ups needed:
 
-## 🎯 Next Steps
-- 
+## 🏆 Hackathons / Events
+- Event name:
+- Key takeaways:
+
+## 🤝 Networking
+- People contacted:
+- Follow-up actions:
+
+## 🗣️ Communication Practice
+- Activity (e.g., talk, write, podcast):
+
+## ✅ End-of-Day Review
+- What I accomplished:
+- What I'll improve tomorrow:
 `;
   };
 
@@ -192,9 +212,9 @@ export default function TrackerPage() {
     return `# Weekly Tracker - ${weekStart}
 
 ## 🎯 Goals This Week
-- [ ] Goal 1: 
-- [ ] Goal 2: 
-- [ ] Goal 3: 
+- [ ] Goal1:
+- [ ] Goal2:
+- [ ] Goal3:
 
 ## ✅ Completed Tasks
 - 
