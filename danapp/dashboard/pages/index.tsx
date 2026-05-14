@@ -1,23 +1,33 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
+import { useRouter } from "next/router";
 
 const secret = process.env.NEXT_PUBLIC_DASHBOARD_SECRET || "";
 
+type SavedPlan = {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export default function TrackerPage() {
+  const router = useRouter();
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
   const [saving, setSaving] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
   const [activeTab, setActiveTab] = useState<"tracker" | "ai" | "weekly">("tracker");
-  
-  // AI planning state
+  const [savedPlans, setSavedPlans] = useState<SavedPlan[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+
   const [prompt, setPrompt] = useState("");
   const [aiResponse, setAiResponse] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
-  
-  // Weekly tracker state
+
   const [weeklyContent, setWeeklyContent] = useState("");
   const [weeklyLoading, setWeeklyLoading] = useState(false);
   const [weeklySaving, setWeeklySaving] = useState(false);
@@ -26,7 +36,7 @@ export default function TrackerPage() {
 
   useEffect(() => {
     loadTracker();
-  }, []);
+  }, [router.query.planId]);
 
   const loadTracker = async () => {
     setLoading(true);
@@ -34,10 +44,22 @@ export default function TrackerPage() {
       const res = await axios.get("/api/notes", {
         headers: { "x-secret": secret },
       });
-      setContent(res.data.content);
-    } catch (e) {
-      console.error(e);
+
+      const plans: SavedPlan[] = res.data.savedPlans || [];
+      const requestedPlanId =
+        typeof router.query.planId === "string" ? router.query.planId : null;
+      const selectedPlan =
+        plans.find((plan) => plan.id === requestedPlanId) ||
+        plans.find((plan) => plan.id === res.data.activePlanId) ||
+        null;
+
+      setSavedPlans(plans);
+      setContent(selectedPlan ? selectedPlan.content : res.data.content || getEmptyTemplate());
+      setSelectedPlanId(selectedPlan ? selectedPlan.id : null);
+    } catch (error) {
+      console.error(error);
       setMsg("❗ Could not load tracker");
+      setContent(getEmptyTemplate());
     } finally {
       setLoading(false);
     }
@@ -48,84 +70,58 @@ export default function TrackerPage() {
       setMsg("❗ Nothing to save");
       return;
     }
-    
+
     setSaving(true);
     setMsg("");
     try {
-      await axios.post(
+      const res = await axios.post(
         "/api/notes",
-        { content },
+        { id: selectedPlanId, content },
         { headers: { "x-secret": secret } }
       );
-      setMsg("✅ Saved successfully");
-      
-      // Clear form after short delay and load fresh template
-      setTimeout(() => {
-        setMsg("");
-        setContent(getEmptyTemplate());
-        setPreviewMode(false);
-      }, 1500);
-    } catch (e) {
-      console.error(e);
+
+      const savedPlan: SavedPlan = res.data.plan;
+      setSelectedPlanId(savedPlan.id);
+      setSavedPlans((current) => {
+        const next = current.filter((plan) => plan.id !== savedPlan.id);
+        next.unshift(savedPlan);
+        return next;
+      });
+      setContent(savedPlan.content);
+      setMsg(selectedPlanId ? "✅ Tracker updated" : "✅ Tracker saved");
+    } catch (error) {
+      console.error(error);
       setMsg("❗ Save failed");
     } finally {
       setSaving(false);
     }
   };
 
-  const appendEntry = async () => {
-    if (!content.trim()) {
-      setMsg("❗ Nothing to save");
-      return;
+  const startNewTracker = () => {
+    if (router.query.planId) {
+      router.replace("/", undefined, { shallow: true });
     }
-    
-    setSaving(true);
-    setMsg("");
-    try {
-      // Get current content
-      const res = await axios.get("/api/notes", {
-        headers: { "x-secret": secret },
-      });
-      
-      const currentContent = res.data.content;
-      const today = new Date();
-      const yyyy = today.getFullYear();
-      const mm = String(today.getMonth() + 1).padStart(2, '0');
-      const dd = String(today.getDate()).padStart(2, '0');
-      const dateStr = `${yyyy}-${mm}-${dd}`;
-      const timestamp = `${dateStr} ${today.getHours()}:${String(today.getMinutes()).padStart(2, '0')}`;
-      const newEntry = `\n\n---\n### Entry: ${timestamp}\n\n${content}`;
-      
-      // Append new entry to existing content
-      await axios.post(
-        "/api/notes",
-        { content: currentContent + newEntry },
-        { headers: { "x-secret": secret } }
-      );
-      
-      setMsg("✅ Entry added successfully");
-      
-      // Clear form for next entry
-      setTimeout(() => {
-        setMsg("");
-        setContent("");
-        setPreviewMode(false);
-      }, 1500);
-    } catch (e) {
-      console.error(e);
-      setMsg("❗ Failed to add entry");
-    } finally {
-      setSaving(false);
-    }
+    setSelectedPlanId(null);
+    setContent(getEmptyTemplate());
+    setPreviewMode(false);
+    setMsg("📝 New tracker ready");
+  };
+
+  const openSavedPlan = (plan: SavedPlan) => {
+    setSelectedPlanId(plan.id);
+    setContent(plan.content);
+    setPreviewMode(false);
+    setMsg(`📂 Editing ${plan.title}`);
+    router.replace(`/?planId=${plan.id}`, undefined, { shallow: true });
   };
 
   const getEmptyTemplate = () => {
     const today = new Date();
     const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
     const dateStr = `${yyyy}-${mm}-${dd}`;
-    
+
     return `# ${dateStr} - Daily Tracker
 
 ## 🎯 Goals for the Day
@@ -176,15 +172,14 @@ export default function TrackerPage() {
         { headers: { "x-secret": secret } }
       );
       setAiResponse(res.data.answer);
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      console.error(error);
       setAiResponse("❗ Error: Could not get AI response");
     } finally {
       setAiLoading(false);
     }
   };
 
-  // Weekly Tracker Functions
   const loadWeekly = async () => {
     setWeeklyLoading(true);
     try {
@@ -192,8 +187,8 @@ export default function TrackerPage() {
         headers: { "x-secret": secret },
       });
       setWeeklyContent(res.data.content || getWeeklyTemplate());
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      console.error(error);
       setWeeklyContent(getWeeklyTemplate());
     } finally {
       setWeeklyLoading(false);
@@ -205,10 +200,10 @@ export default function TrackerPage() {
     const monday = new Date(today);
     monday.setDate(today.getDate() - (today.getDay() === 0 ? 6 : today.getDay() - 1));
     const yyyy = monday.getFullYear();
-    const mm = String(monday.getMonth() + 1).padStart(2, '0');
-    const dd = String(monday.getDate()).padStart(2, '0');
+    const mm = String(monday.getMonth() + 1).padStart(2, "0");
+    const dd = String(monday.getDate()).padStart(2, "0");
     const weekStart = `${yyyy}-${mm}-${dd}`;
-    
+
     return `# Weekly Tracker - ${weekStart}
 
 ## 🎯 Goals This Week
@@ -241,6 +236,7 @@ export default function TrackerPage() {
       setWeeklyMsg("❗ Nothing to save");
       return;
     }
+
     setWeeklySaving(true);
     setWeeklyMsg("");
     try {
@@ -251,87 +247,155 @@ export default function TrackerPage() {
       );
       setWeeklyMsg("✅ Weekly plan saved!");
       setTimeout(() => setWeeklyMsg(""), 1500);
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      console.error(error);
       setWeeklyMsg("❗ Failed to save weekly plan");
     } finally {
       setWeeklySaving(false);
     }
   };
 
-  if (loading) return (
-    <div style={styles.loadingContainer}>
-      <p style={styles.loadingText}>Loading…</p>
-    </div>
-  );
+  const formatSavedPlanTime = (value: string) => {
+    return new Date(value).toLocaleString("en-US", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+  };
+
+  if (loading) {
+    return (
+      <div style={styles.loadingContainer}>
+        <p style={styles.loadingText}>Loading…</p>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.container}>
       <header style={styles.header}>
         <h1 style={styles.title}>📊 Daily Tracker Dashboard</h1>
         <div style={styles.tabContainer}>
-          <button 
+          <button
             onClick={() => setActiveTab("tracker")}
             style={activeTab === "tracker" ? styles.activeTab : styles.tab}
           >
             📝 Tracker
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab("ai")}
             style={activeTab === "ai" ? styles.activeTab : styles.tab}
           >
             🤖 AI Planner
           </button>
-          <button 
-            onClick={() => { setActiveTab("weekly"); loadWeekly(); }}
+          <button
+            onClick={() => {
+              setActiveTab("weekly");
+              loadWeekly();
+            }}
             style={activeTab === "weekly" ? styles.activeTab : styles.tab}
           >
             📅 Weekly Tracker
           </button>
         </div>
-        <button onClick={() => window.location.href = "/history"} style={styles.historyBtn}>
+        <button onClick={() => (window.location.href = "/history")} style={styles.historyBtn}>
           📜 History
         </button>
       </header>
 
       {activeTab === "tracker" && (
-        <main style={styles.main}>
-          <div style={styles.editorHeader}>
-            <div style={styles.buttonGroup}>
-              <button onClick={() => setPreviewMode(!previewMode)} style={styles.secondaryBtn}>
-                {previewMode ? "✏️ Edit" : "👁️ Preview"}
-              </button>
-              <button onClick={save} disabled={saving} style={saving ? styles.saveBtnDisabled : styles.saveBtn}>
-                {saving ? "Saving…" : "💾 Save & New"}
-              </button>
-              <button onClick={appendEntry} disabled={saving} style={saving ? styles.saveBtnDisabled : styles.secondaryBtn}>
-                {saving ? "Adding…" : "➕ Add Entry"}
-              </button>
-              <button onClick={loadTracker} style={styles.secondaryBtn}>
-                🔄 Reload
-              </button>
-              <button 
-                onClick={() => { setActiveTab("ai"); setPrompt("Analyze my daily tracker entries and provide 3-5 actionable tips to improve my productivity, accomplish more goals, and address any blockers mentioned."); }} 
-                style={styles.analyzeBtn}
-              >
-                📊 Analyze My Day
+        <main style={styles.trackerWorkspace}>
+          <aside style={styles.sidebar}>
+            <div style={styles.sidebarHeader}>
+              <h2 style={styles.sidebarTitle}>Saved</h2>
+              <button onClick={startNewTracker} style={styles.newBtn}>
+                ＋ New
               </button>
             </div>
-            {msg && <span style={msg.includes("✅") ? styles.successMsg : styles.errorMsg}>{msg}</span>}
-          </div>
 
-          {previewMode ? (
-            <div style={styles.previewContainer}>
-              <ReactMarkdown>{content}</ReactMarkdown>
+            {savedPlans.length === 0 ? (
+              <p style={styles.emptySidebarText}>No saved trackers yet.</p>
+            ) : (
+              <div style={styles.savedPlansList}>
+                {savedPlans.map((plan) => (
+                  <button
+                    key={plan.id}
+                    onClick={() => openSavedPlan(plan)}
+                    style={plan.id === selectedPlanId ? styles.savedPlanItemActive : styles.savedPlanItem}
+                  >
+                    <span style={styles.savedPlanTitle}>{plan.title}</span>
+                    <span style={styles.savedPlanMeta}>
+                      Updated {formatSavedPlanTime(plan.updatedAt)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </aside>
+
+          <section style={styles.editorPanel}>
+            <div style={styles.editorHeader}>
+              <div style={styles.buttonGroup}>
+                <button onClick={() => setPreviewMode(!previewMode)} style={styles.secondaryBtn}>
+                  {previewMode ? "✏️ Edit" : "👁️ Preview"}
+                </button>
+                <button onClick={save} disabled={saving} style={saving ? styles.saveBtnDisabled : styles.saveBtn}>
+                  {saving ? "Saving…" : selectedPlanId ? "💾 Save" : "💾 Save"}
+                </button>
+                <button onClick={startNewTracker} style={styles.secondaryBtn}>
+                  🆕 New
+                </button>
+                <button onClick={loadTracker} style={styles.secondaryBtn}>
+                  🔄 Reload
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveTab("ai");
+                    setPrompt(
+                      "Analyze my daily tracker entries and provide 3-5 actionable tips to improve my productivity, accomplish more goals, and address any blockers mentioned."
+                    );
+                  }}
+                  style={styles.analyzeBtn}
+                >
+                  📊 Analyze My Day
+                </button>
+              </div>
+              {msg && (
+                <span
+                  style={
+                    msg.includes("✅")
+                      ? styles.successMsg
+                      : msg.includes("❗")
+                        ? styles.errorMsg
+                        : styles.infoMsg
+                  }
+                >
+                  {msg}
+                </span>
+              )}
             </div>
-          ) : (
-            <textarea
-              style={styles.textarea}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Start writing your daily tracker notes..."
-            />
-          )}
+
+            <div style={styles.activePlanBar}>
+              <strong style={styles.activePlanLabel}>Editing:</strong>
+              <span style={styles.activePlanValue}>
+                {selectedPlanId
+                  ? savedPlans.find((plan) => plan.id === selectedPlanId)?.title || "Saved tracker"
+                  : "New unsaved tracker"}
+              </span>
+            </div>
+
+            {previewMode ? (
+              <div style={styles.previewContainer}>
+                <ReactMarkdown>{content}</ReactMarkdown>
+              </div>
+            ) : (
+              <textarea
+                style={styles.textarea}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Start writing your daily tracker notes..."
+              />
+            )}
+          </section>
         </main>
       )}
 
@@ -346,15 +410,15 @@ export default function TrackerPage() {
                 placeholder="Ask the AI to help you plan your day, summarize your tracker, or suggest improvements..."
                 rows={6}
               />
-              <button 
-                onClick={askAI} 
-                disabled={aiLoading || !prompt.trim()} 
+              <button
+                onClick={askAI}
+                disabled={aiLoading || !prompt.trim()}
                 style={aiLoading || !prompt.trim() ? styles.saveBtnDisabled : styles.saveBtn}
               >
                 {aiLoading ? "🤔 Thinking…" : "🚀 Ask AI"}
               </button>
             </div>
-            
+
             {aiResponse && (
               <div style={styles.aiResponseSection}>
                 <h3 style={styles.aiResponseTitle}>AI Response:</h3>
@@ -377,15 +441,12 @@ export default function TrackerPage() {
             <div style={styles.trackerContainer}>
               <div style={styles.editorHeader}>
                 <div style={styles.buttonGroup}>
-                  <button 
-                    onClick={() => setWeeklyPreviewMode(!weeklyPreviewMode)} 
-                    style={styles.secondaryBtn}
-                  >
+                  <button onClick={() => setWeeklyPreviewMode(!weeklyPreviewMode)} style={styles.secondaryBtn}>
                     {weeklyPreviewMode ? "✏️ Edit" : "👁️ Preview"}
                   </button>
-                  <button 
-                    onClick={saveWeekly} 
-                    disabled={weeklySaving} 
+                  <button
+                    onClick={saveWeekly}
+                    disabled={weeklySaving}
                     style={weeklySaving ? styles.saveBtnDisabled : styles.saveBtn}
                   >
                     {weeklySaving ? "Saving…" : "💾 Save Weekly Plan"}
@@ -393,14 +454,31 @@ export default function TrackerPage() {
                   <button onClick={loadWeekly} style={styles.secondaryBtn}>
                     🔄 Reload
                   </button>
-                  <button 
-                    onClick={() => { setActiveTab("ai"); setPrompt("Analyze my weekly tracker goals, completed tasks, blockers, and reflections. Provide specific guidance to help me accomplish my goals, overcome challenges, and improve my accountability for next week."); }} 
+                  <button
+                    onClick={() => {
+                      setActiveTab("ai");
+                      setPrompt(
+                        "Analyze my weekly tracker goals, completed tasks, blockers, and reflections. Provide specific guidance to help me accomplish my goals, overcome challenges, and improve my accountability for next week."
+                      );
+                    }}
                     style={styles.analyzeBtn}
                   >
                     📊 Analyze My Week
                   </button>
                 </div>
-                {weeklyMsg && <span style={weeklyMsg.includes("✅") ? styles.successMsg : styles.errorMsg}>{weeklyMsg}</span>}
+                {weeklyMsg && (
+                  <span
+                    style={
+                      weeklyMsg.includes("✅")
+                        ? styles.successMsg
+                        : weeklyMsg.includes("❗")
+                          ? styles.errorMsg
+                          : styles.infoMsg
+                    }
+                  >
+                    {weeklyMsg}
+                  </span>
+                )}
               </div>
 
               {weeklyPreviewMode ? (
@@ -466,6 +544,93 @@ const styles = {
     margin: "0 auto",
     padding: "0 2rem 2rem",
   },
+  trackerWorkspace: {
+    maxWidth: "1280px",
+    margin: "0 auto",
+    padding: "0 2rem 2rem",
+    display: "grid",
+    gridTemplateColumns: "280px minmax(0, 1fr)",
+    gap: "1.5rem",
+    alignItems: "start",
+  },
+  sidebar: {
+    backgroundColor: "#fff",
+    border: "1px solid #ddd",
+    borderRadius: "10px",
+    padding: "1rem",
+    position: "sticky" as const,
+    top: "1.5rem",
+  },
+  sidebarHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "1rem",
+    gap: "0.75rem",
+  },
+  sidebarTitle: {
+    margin: 0,
+    fontSize: "1rem",
+    color: "#222",
+  },
+  newBtn: {
+    padding: "0.45rem 0.8rem",
+    backgroundColor: "#111827",
+    color: "#fff",
+    border: "none",
+    borderRadius: "6px",
+    cursor: "pointer",
+    fontSize: "0.85rem",
+    fontWeight: "bold" as const,
+  },
+  savedPlansList: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: "0.6rem",
+    maxHeight: "70vh",
+    overflowY: "auto" as const,
+  },
+  savedPlanItem: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: "0.25rem",
+    width: "100%",
+    textAlign: "left" as const,
+    padding: "0.8rem",
+    border: "1px solid #e5e7eb",
+    backgroundColor: "#fafafa",
+    borderRadius: "8px",
+    cursor: "pointer",
+  },
+  savedPlanItemActive: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: "0.25rem",
+    width: "100%",
+    textAlign: "left" as const,
+    padding: "0.8rem",
+    border: "1px solid #0070f3",
+    backgroundColor: "#eff6ff",
+    borderRadius: "8px",
+    cursor: "pointer",
+  },
+  savedPlanTitle: {
+    fontSize: "0.95rem",
+    fontWeight: "bold" as const,
+    color: "#111827",
+  },
+  savedPlanMeta: {
+    fontSize: "0.78rem",
+    color: "#6b7280",
+  },
+  emptySidebarText: {
+    margin: 0,
+    color: "#6b7280",
+    fontSize: "0.9rem",
+  },
+  editorPanel: {
+    minWidth: 0,
+  },
   editorHeader: {
     display: "flex",
     justifyContent: "space-between",
@@ -521,10 +686,31 @@ const styles = {
     color: "#22c55e",
     fontWeight: "bold" as const,
   },
+  infoMsg: {
+    marginLeft: "1rem",
+    color: "#374151",
+    fontWeight: "bold" as const,
+  },
   errorMsg: {
     marginLeft: "1rem",
     color: "#ef4444",
     fontWeight: "bold" as const,
+  },
+  activePlanBar: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
+    marginBottom: "0.8rem",
+    padding: "0.8rem 1rem",
+    backgroundColor: "#fff",
+    border: "1px solid #e5e7eb",
+    borderRadius: "8px",
+  },
+  activePlanLabel: {
+    color: "#374151",
+  },
+  activePlanValue: {
+    color: "#111827",
   },
   textarea: {
     width: "100%",

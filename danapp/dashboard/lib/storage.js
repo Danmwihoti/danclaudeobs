@@ -54,6 +54,16 @@ export async function ensureStorageSchema() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS tracker_plans (
+      id BIGSERIAL PRIMARY KEY,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
 }
 
 export async function getDocument(key) {
@@ -144,6 +154,58 @@ export async function appendClaudeAnswer(query, answer) {
   return appendDocument("claude_answers", entry);
 }
 
+export async function listTrackerPlans() {
+  await ensureStorageSchema();
+  const { rows } = await pool.query(`
+    SELECT id, title, content, created_at, updated_at
+    FROM tracker_plans
+    ORDER BY updated_at DESC
+  `);
+  return rows;
+}
+
+export async function saveTrackerPlan({ id, content }) {
+  await ensureStorageSchema();
+
+  const title = extractTrackerTitle(content);
+  let savedPlan;
+
+  if (id) {
+    const { rows } = await pool.query(
+      `
+        UPDATE tracker_plans
+        SET title = $2, content = $3, updated_at = NOW()
+        WHERE id = $1
+        RETURNING id, title, content, created_at, updated_at
+      `,
+      [id, title, content]
+    );
+
+    if (rows.length === 0) {
+      throw new Error(`Tracker plan ${id} not found`);
+    }
+    savedPlan = rows[0];
+  } else {
+    const { rows } = await pool.query(
+      `
+        INSERT INTO tracker_plans (title, content, created_at, updated_at)
+        VALUES ($1, $2, NOW(), NOW())
+        RETURNING id, title, content, created_at, updated_at
+      `,
+      [title, content]
+    );
+    savedPlan = rows[0];
+  }
+
+  await setDocument("daily_tracker", content);
+  return savedPlan;
+}
+
+export async function getLatestTrackerPlan() {
+  const plans = await listTrackerPlans();
+  return plans[0] || null;
+}
+
 export async function importVaultDocuments({ overwrite = true } = {}) {
   await ensureStorageSchema();
 
@@ -199,6 +261,35 @@ async function loadFromVaultIfPresent(documentConfig) {
   }
 }
 
+export async function getLocalDocument(key) {
+  const documentConfig = DOCUMENTS[key];
+  if (!documentConfig) {
+    throw new Error(`Unknown document key: ${key}`);
+  }
+
+  const absolutePath = await findExistingVaultFilePath(documentConfig);
+  if (!absolutePath) {
+    return resolveDefaultContent(documentConfig.defaultContent);
+  }
+
+  return fs.readFile(absolutePath, "utf-8");
+}
+
+export async function setLocalDocument(key, content) {
+  const documentConfig = DOCUMENTS[key];
+  if (!documentConfig) {
+    throw new Error(`Unknown document key: ${key}`);
+  }
+
+  const absolutePath =
+    getVaultFilePath(documentConfig) ||
+    path.join(LOCAL_REPO_VAULT_PATH, ...documentConfig.filePath);
+
+  await fs.mkdir(path.dirname(absolutePath), { recursive: true });
+  await fs.writeFile(absolutePath, content, "utf-8");
+  return content;
+}
+
 async function syncDocumentToVault(key, content) {
   const documentConfig = DOCUMENTS[key];
   const absolutePath = getVaultFilePath(documentConfig);
@@ -246,6 +337,15 @@ async function findExistingVaultFilePath(documentConfig) {
 
 function resolveDefaultContent(defaultContent) {
   return typeof defaultContent === "function" ? defaultContent() : defaultContent;
+}
+
+function extractTrackerTitle(content) {
+  const firstLine = content.split("\n")[0]?.replace(/^#\s*/, "").trim();
+  if (firstLine) {
+    return firstLine;
+  }
+
+  return `Daily Tracker ${new Date().toISOString().slice(0, 10)}`;
 }
 
 function getDailyTemplate() {
